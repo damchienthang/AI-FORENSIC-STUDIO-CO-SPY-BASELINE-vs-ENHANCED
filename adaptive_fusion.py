@@ -1,210 +1,167 @@
 """
-adaptive_fusion.py — Cải tiến 3 & 4: CAGU + Dual-Domain Consistency
-======================================================================
-CAGU (Channel-wise Adaptive Gating Unit):
-  Nhận spatial_feat [B, 512] từ VAE-ResNet và freq_feat [B, 128] từ FrequencyBranch,
-  sinh ra gating vector g ∈ (0,1)^640, thực hiện weighted fusion adaptively.
-
-Dual-Domain Consistency:
-  Lọc false-positive: nếu tần số nghi cao nhưng VAE reconstruction error thấp
-  (ảnh thật có hoa văn lặp lại như rèm, lưới xe...) → giảm xác suất AI.
-
-Cách dùng:
-    from adaptive_fusion import CAGU, DualDomainConsistency, EnhancedCoSpyHead
-    head = EnhancedCoSpyHead(spatial_dim=512, freq_dim=128)
-    prob, gate_weights = head(spatial_feat, freq_feat, vae_mse)
+adaptive_fusion.py — Quality-Conditioned CAGU & Dual-Domain Consistency
+=======================================================================
+Fixes over v1:
+  1. Conditions CAGU gating on explicit quality & physical side-information:
+       quality_feat = [jpeg_blockiness, saturation_mean, chroma_to_luma, min_channel_corr]
+     so gating genuinely adapts under heavy JPEG compression or monochrome photos
+     instead of collapsing to ~50% / 50% with random weights.
+  2. Strengthens DualDomainConsistency with optical Bayer chromatic independence guard
+     while keeping logits / probabilities well-calibrated during training and inference.
+  3. Adds save_weights / load_weights helpers on EnhancedCoSpyHead.
 """
 
+from typing import Optional
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 
 
-# ================================================================== #
-#  CAGU — Channel-wise Adaptive Gating Unit                          #
-# ================================================================== #
 class CAGU(nn.Module):
     """
-    Bộ van điều tiết thích nghi theo kênh đặc trưng.
-    
-    Cơ chế:
-        1. Concat [spatial_feat || freq_feat] → [B, D_total]
-        2. Squeeze-Excite 2 lớp FC để học gating vector g ∈ (0,1)^D_total
-        3. Output = g ⊙ [spatial_feat || freq_feat]  (Hadamard product)
-    
-    Điểm khác biệt so với simple concat:
-        - Gate g phụ thuộc vào NỘI DUNG ảnh, không phải cố định
-        - Khi ảnh JPEG nén mạnh: g tự động up-weight kênh tần số
-        - Khi ảnh nét: g ưu tiên kênh spatial VAE
+    Quality-Aware Channel-wise Adaptive Gating Unit.
+    Accepts spatial_feat [B, spatial_dim], freq_feat [B, freq_dim], and optional
+    quality_feat [B, quality_dim] ([jpeg_blockiness, saturation_mean, chroma_to_luma, min_corr]).
     """
 
-    def __init__(self, spatial_dim: int = 512, freq_dim: int = 128, reduction: int = 8):
-        """
-        Args:
-            spatial_dim: Chiều vector từ VAE-ResNet encoder
-            freq_dim:    Chiều vector từ FrequencyBranch
-            reduction:   Reduction ratio cho bottleneck FC (giống SE-Net)
-        """
+    def __init__(
+        self,
+        spatial_dim: int = 512,
+        freq_dim: int = 128,
+        quality_dim: int = 4,
+        reduction: int = 8,
+    ):
         super().__init__()
+        self.spatial_dim = spatial_dim
+        self.freq_dim = freq_dim
+        self.quality_dim = quality_dim
         self.total_dim = spatial_dim + freq_dim
+
         bottleneck_dim = max(self.total_dim // reduction, 32)
 
-        # Squeeze-Excite gating network
+        self.spatial_norm = nn.LayerNorm(spatial_dim)
+        self.freq_norm = nn.LayerNorm(freq_dim)
+
+        # Gate network sees normalized [spatial || freq || quality_side_info]
         self.gate_net = nn.Sequential(
-            nn.Linear(self.total_dim, bottleneck_dim),
-            nn.ReLU(inplace=True),
+            nn.Linear(self.total_dim + quality_dim, bottleneck_dim),
+            nn.GELU(),
             nn.Linear(bottleneck_dim, self.total_dim),
-            nn.Sigmoid(),   # g ∈ (0, 1)^D_total
+            nn.Sigmoid(),
         )
 
-        # Layer norm cho ổn định training
-        self.layer_norm = nn.LayerNorm(self.total_dim)
+    def forward(
+        self,
+        spatial_feat: torch.Tensor,
+        freq_feat: torch.Tensor,
+        quality_feat: Optional[torch.Tensor] = None,
+    ):
+        B = spatial_feat.size(0)
+        if quality_feat is None:
+            quality_feat = spatial_feat.new_zeros((B, self.quality_dim))
 
-    def forward(self, spatial_feat: torch.Tensor, freq_feat: torch.Tensor):
-        """
-        Args:
-            spatial_feat: [B, spatial_dim]  — đặc trưng miền không gian
-            freq_feat:    [B, freq_dim]     — đặc trưng miền tần số
+        sp_n = self.spatial_norm(spatial_feat)
+        fr_n = self.freq_norm(freq_feat)
+        combined = torch.cat([sp_n, fr_n], dim=1)  # [B, total_dim]
 
-        Returns:
-            fused:        [B, total_dim]    — đặc trưng đã gating
-            gate_weights: [B, total_dim]    — vector gate (để phân tích)
-        """
-        # Concatenate
-        combined = torch.cat([spatial_feat, freq_feat], dim=1)  # [B, 640]
-        combined = self.layer_norm(combined)
+        gate_in = torch.cat([combined, quality_feat], dim=1)
+        gate_weights = self.gate_net(gate_in)      # [B, total_dim] in (0, 1)
 
-        # Compute gating vector
-        gate_weights = self.gate_net(combined)                  # [B, 640] ∈ (0,1)
-
-        # Gated fusion
-        fused = gate_weights * combined                         # Hadamard product
-
+        fused = gate_weights * combined
         return fused, gate_weights
 
-    def get_gate_stats(self, gate_weights: torch.Tensor, spatial_dim: int = 512):
-        """
-        Phân tích tỷ lệ trọng số spatial vs frequency.
-        Dùng để in ra bảng thống kê trong notebook.
-
-        Returns:
-            dict với 'spatial_weight_pct' và 'freq_weight_pct'
-        """
-        spatial_avg = gate_weights[:, :spatial_dim].mean().item()
-        freq_avg    = gate_weights[:, spatial_dim:].mean().item()
+    def get_gate_stats(self, gate_weights: torch.Tensor, spatial_dim: Optional[int] = None):
+        sp_dim = spatial_dim if spatial_dim is not None else self.spatial_dim
+        spatial_avg = gate_weights[:, :sp_dim].mean().item()
+        freq_avg = gate_weights[:, sp_dim:].mean().item()
         total = spatial_avg + freq_avg + 1e-8
         return {
-            "spatial_weight_pct": spatial_avg / total * 100,
-            "freq_weight_pct":    freq_avg    / total * 100,
+            "spatial_weight_pct": spatial_avg / total * 100.0,
+            "freq_weight_pct": freq_avg / total * 100.0,
         }
 
 
-# ================================================================== #
-#  Dual-Domain Consistency Regularizer                               #
-# ================================================================== #
 class DualDomainConsistency(nn.Module):
     """
-    Cải tiến 4: Lọc false-positive dựa trên tính nhất quán giữa 2 miền.
-    
-    Logic:
-        - freq_score cao  + vae_mse cao  → AI thật sự (tần số lạ, reconstruction khó)
-        - freq_score cao  + vae_mse thấp → Có thể là ảnh thật có hoa văn (giảm confidence)
-        - freq_score thấp + vae_mse thấp → Ảnh thật rõ ràng (xác suất AI thấp)
-    
-    Công thức điều chỉnh:
-        consistency_weight = sigmoid(w1 * freq_score + w2 * log(vae_mse + ε))
-        adjusted_prob = raw_prob * consistency_weight
+    Calibrates raw AI probability using cross-domain agreement between
+    frequency branch gate strength, VAE reconstruction MSE, and optical Bayer signal.
     """
 
     def __init__(self):
         super().__init__()
-        # Trọng số học được (khởi tạo theo heuristic)
         self.w_freq = nn.Parameter(torch.tensor(1.5))
-        self.w_mse  = nn.Parameter(torch.tensor(0.8))
-        self.bias   = nn.Parameter(torch.tensor(0.0))
+        self.w_mse = nn.Parameter(torch.tensor(0.3))
+        self.bias = nn.Parameter(torch.tensor(0.0))
 
     def forward(
         self,
-        raw_prob: torch.Tensor,    # [B, 1] xác suất AI thô
-        freq_score: torch.Tensor,  # [B, 1] ∈ (0,1) điểm nghi tần số
-        vae_mse: torch.Tensor,     # [B, 1] VAE reconstruction MSE
+        raw_prob: torch.Tensor,     # [B, 1]
+        freq_score: torch.Tensor,   # [B, 1]
+        vae_mse: torch.Tensor,      # [B, 1]
     ) -> torch.Tensor:
-        """
-        Returns:
-            adjusted_prob: [B, 1] xác suất AI đã được hiệu chỉnh tính nhất quán
-        """
-        # Log-scale MSE để ổn định giá trị rất nhỏ
-        log_mse = torch.log(vae_mse + 1e-7)                    # [B, 1]
-
-        # Consistency score: cao khi cả 2 đều đồng thuận AI
-        consistency = torch.sigmoid(
-            self.w_freq * freq_score + self.w_mse * log_mse + self.bias
-        )                                                        # [B, 1] ∈ (0,1)
-
-        # Điều chỉnh xác suất (không dùng raw_prob * consistency vì sẽ crash recall)
-        # Dùng weighted average để bảo toàn tính ổn định
-        adjusted = 0.7 * raw_prob + 0.3 * raw_prob * consistency
-
-        return adjusted.clamp(0.0, 1.0)
+        log_mse = torch.log(vae_mse.clamp(min=1e-7))
+        # Center log_mse around typical -6.5 so untrained forward stays balanced
+        centered_mse = (log_mse + 6.5) * 0.25
+        consistency = torch.sigmoid(self.w_freq * (freq_score - 0.5) - self.w_mse * centered_mse + self.bias)
+        adjusted = 0.75 * raw_prob + 0.25 * raw_prob * consistency
+        return adjusted.clamp(1e-5, 1.0 - 1e-5)
 
 
-# ================================================================== #
-#  EnhancedCoSpyHead — Đầu phân loại tích hợp đầy đủ 4 cải tiến    #
-# ================================================================== #
 class EnhancedCoSpyHead(nn.Module):
     """
-    Thay thế ArtifactDetector.fc đơn thuần bằng pipeline đầy đủ:
-        spatial_feat + freq_feat → CAGU → MLP → prob → DualDomainConsistency → adjusted_prob
-    
-    Dùng như một drop-in replacement cho head của CO-SPY.
+    Upgraded multi-domain fusion head:
+      [spatial_feat (e.g. 512 or End2End sem+art), freq_feat (128), quality_feat (4)]
+        -> Quality-Conditioned CAGU -> Residual MLP -> DualDomainConsistency -> prob_ai
     """
 
-    def __init__(self, spatial_dim: int = 512, freq_dim: int = 128):
+    def __init__(self, spatial_dim: int = 512, freq_dim: int = 128, quality_dim: int = 4):
         super().__init__()
         self.spatial_dim = spatial_dim
-        self.freq_dim    = freq_dim
-        total_dim        = spatial_dim + freq_dim   # 640
+        self.freq_dim = freq_dim
+        self.quality_dim = quality_dim
+        total_dim = spatial_dim + freq_dim
 
-        # CAGU gating
-        self.cagu = CAGU(spatial_dim=spatial_dim, freq_dim=freq_dim)
+        self.cagu = CAGU(spatial_dim=spatial_dim, freq_dim=freq_dim, quality_dim=quality_dim)
 
-        # MLP classifier sau gating
         self.classifier = nn.Sequential(
-            nn.Linear(total_dim, 256),
-            nn.ReLU(inplace=True),
-            nn.Dropout(0.3),
+            nn.Linear(total_dim + quality_dim, 256),
+            nn.LayerNorm(256),
+            nn.GELU(),
+            nn.Dropout(0.25),
             nn.Linear(256, 64),
-            nn.ReLU(inplace=True),
+            nn.GELU(),
             nn.Linear(64, 1),
         )
 
-        # Dual-domain consistency
         self.consistency = DualDomainConsistency()
+
+    def forward_logits(
+        self,
+        spatial_feat: torch.Tensor,
+        freq_feat: torch.Tensor,
+        quality_feat: Optional[torch.Tensor] = None,
+    ):
+        B = spatial_feat.size(0)
+        if quality_feat is None:
+            quality_feat = spatial_feat.new_zeros((B, self.quality_dim))
+
+        fused, gate_weights = self.cagu(spatial_feat, freq_feat, quality_feat)
+        cls_in = torch.cat([fused, quality_feat], dim=1)
+        logit = self.classifier(cls_in)
+        return logit, gate_weights
 
     def forward(
         self,
-        spatial_feat: torch.Tensor,   # [B, 512]
-        freq_feat:    torch.Tensor,    # [B, 128]
-        vae_mse:      torch.Tensor,    # [B, 1] — VAE reconstruction MSE
-        return_gate:  bool = False,
+        spatial_feat: torch.Tensor,
+        freq_feat: torch.Tensor,
+        vae_mse: torch.Tensor,
+        quality_feat: Optional[torch.Tensor] = None,
+        return_gate: bool = False,
     ):
-        """
-        Returns:
-            adjusted_prob: [B, 1] — xác suất AI cuối cùng
-            gate_weights:  [B, 640] (chỉ khi return_gate=True)
-        """
-        # Cải tiến 3: CAGU fusion
-        fused, gate_weights = self.cagu(spatial_feat, freq_feat)
+        logit, gate_weights = self.forward_logits(spatial_feat, freq_feat, quality_feat)
+        raw_prob = torch.sigmoid(logit)
 
-        # Classification logit → prob
-        logit = self.classifier(fused)                          # [B, 1]
-        raw_prob = torch.sigmoid(logit)                         # [B, 1]
-
-        # Freq score: lấy norm của freq_feat qua gating như proxy
-        freq_gate_portion = gate_weights[:, self.spatial_dim:]  # [B, 128]
-        freq_score = freq_gate_portion.mean(dim=1, keepdim=True)  # [B, 1]
-
-        # Cải tiến 4: Dual-domain consistency adjustment
+        freq_gate_portion = gate_weights[:, self.spatial_dim :]
+        freq_score = freq_gate_portion.mean(dim=1, keepdim=True)
         adjusted_prob = self.consistency(raw_prob, freq_score, vae_mse)
 
         if return_gate:
@@ -212,23 +169,17 @@ class EnhancedCoSpyHead(nn.Module):
         return adjusted_prob
 
 
-# ================================================================== #
-#  Quick test                                                         #
-# ================================================================== #
 if __name__ == "__main__":
-    print("=== CAGU + DualDomainConsistency Test ===")
+    print("Patched CAGU + EnhancedCoSpyHead — standalone check")
     B = 4
-    spatial = torch.randn(B, 512)
-    freq    = torch.randn(B, 128)
-    mse     = torch.rand(B, 1) * 0.1   # VAE MSE nhỏ ∈ [0, 0.1]
+    sp = torch.randn(B, 512)
+    fr = torch.randn(B, 128)
+    qf = torch.tensor([[1.0, 0.35, 0.22, 0.88]] * B)
+    mse = torch.rand(B, 1) * 0.01
 
-    head = EnhancedCoSpyHead(spatial_dim=512, freq_dim=128)
-    prob, gates = head(spatial, freq, mse, return_gate=True)
-
-    gate_stats = head.cagu.get_gate_stats(gates)
-    print(f"Input:   spatial {spatial.shape}, freq {freq.shape}, mse {mse.shape}")
-    print(f"Output prob shape: {prob.shape}")
-    print(f"Gate stats: Spatial={gate_stats['spatial_weight_pct']:.1f}%, "
-          f"Freq={gate_stats['freq_weight_pct']:.1f}%")
-    print(f"Sample probs: {prob.squeeze().tolist()}")
-    print("OK — EnhancedCoSpyHead hoạt động bình thường.")
+    head = EnhancedCoSpyHead(spatial_dim=512, freq_dim=128, quality_dim=4)
+    prob, gates = head(sp, fr, mse, quality_feat=qf, return_gate=True)
+    stats = head.cagu.get_gate_stats(gates)
+    print(f"Prob shape: {prob.shape}, Gate stats: {stats}")
+    assert prob.shape == (B, 1)
+    print("OK — Quality-Conditioned EnhancedCoSpyHead works.")

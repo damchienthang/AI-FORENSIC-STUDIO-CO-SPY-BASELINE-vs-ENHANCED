@@ -1,175 +1,160 @@
 """
-frequency_branch.py — Cải tiến 2: Nhánh tần số 2D-FFT với CNN 3 lớp
+frequency_branch.py — Patched Native-Resolution 2D-FFT Spectral Branch
 ======================================================================
-Áp dụng bộ lọc High-Pass (HPF) trên phổ Fourier 2D để bắt các dấu vết
-upsampling grid artifact đặc trưng của AI, kể cả khi ảnh đã bị nén JPEG.
-
-Kiến trúc:
-  Ảnh RGB → Grayscale → 2D-FFT → Mask High-Pass (r₀=16) → iFFT → 
-  3-layer CNN (Conv→BN→ReLU) → AdaptiveAvgPool → 128-dim feature vector
-
-Cách dùng:
-    from frequency_branch import FrequencyBranch
-    branch = FrequencyBranch(out_features=128).eval()
-    feat = branch(tensor_input)   # [B, 128]
+Fixes over v1:
+  1. Removes destructive per-sample min-max normalization to [0, 1] inside HighPassFFTLayer
+     (which previously collapsed real vs. AI frequency energy to ~0.49 vs ~0.50).
+     Instead uses log1p(|F_high|) + global BatchNorm2d normalization to preserve true spectral amplitude.
+  2. Extracts frequency residuals on NATIVE-RESOLUTION crops (center or multi-crop) instead of
+     bilinear downsampling to 256x256, preserving high-frequency grid/latent artifacts on 1024px FLUX images.
+  3. Upgrades compute_fft_power_spectrum(pil_image) to visualize native residual 2D-FFT.
 """
 
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import numpy as np
+
+from native_forensics import compute_native_2d_fft
 
 
 class HighPassFFTLayer(nn.Module):
     """
-    Bộ lọc High-Pass 2D-FFT không tham số (không học được).
-    
-    Quy trình:
-        1. Chuyển ảnh sang grayscale
-        2. FFT2D + fftshift
-        3. Zero-out vùng tần số thấp (vòng tròn r < r0)
-        4. ifftshift + iFFT2D → lấy phần thực
-        5. Normalize → tensor [B, 1, H, W]
+    Amplitude-preserving 2D-FFT High-Pass Filtering Layer.
+    Outputs a 2-channel tensor [B, 2, H, W]:
+      - Channel 0: High-pass reconstructed spatial residual (log-compressed signed amplitude)
+      - Channel 1: Shifted log1p(2D-FFT high-pass magnitude) preserving absolute spectral energy
     """
 
     def __init__(self, r0: int = 16):
-        """
-        Args:
-            r0: Bán kính ngưỡng tần số thấp cần loại bỏ (pixel, trong miền tần số).
-                r0=16 là giá trị tốt nhất theo thực nghiệm trong báo cáo.
-        """
         super().__init__()
         self.r0 = r0
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """
         Args:
-            x: Tensor [B, 3, H, W], float32 ∈ [0, 1]
+            x: [B, C, H, W] float tensor in [0, 1] (at native crop resolution)
         Returns:
-            Tensor [B, 1, H, W] — ảnh high-pass frequency residual
+            [B, 2, H, W] amplitude-preserving residual + log-spectrum tensor
         """
-        # Grayscale: luminance = 0.299R + 0.587G + 0.114B
-        gray = 0.299 * x[:, 0] + 0.587 * x[:, 1] + 0.114 * x[:, 2]  # [B, H, W]
+        B, C, H, W = x.shape
 
-        # 2D FFT (trên CPU hoặc GPU đều được)
-        fft = torch.fft.fft2(gray)
-        fft_shifted = torch.fft.fftshift(fft, dim=(-2, -1))
+        # Convert RGB -> Luminance
+        if C == 3:
+            weights = x.new_tensor([0.299, 0.587, 0.114]).view(1, 3, 1, 1)
+            gray = (x * weights).sum(dim=1)  # [B, H, W]
+        else:
+            gray = x[:, 0]
 
-        # Tạo high-pass mask: 1 ở mọi nơi, 0 trong vòng tròn r < r0
-        B, H, W = gray.shape
+        # Subtract local mean to suppress DC / scene brightness before FFT
+        gray = gray - gray.mean(dim=(-2, -1), keepdim=True)
+
+        # 2D FFT -> shift DC to center
+        fft_shifted = torch.fft.fftshift(torch.fft.fft2(gray), dim=(-2, -1))
+
+        # Radial high-pass mask scaled proportionally if H != 256
         cy, cx = H // 2, W // 2
-        y_idx = torch.arange(H, device=x.device).view(-1, 1).float() - cy
-        x_idx = torch.arange(W, device=x.device).view(1, -1).float() - cx
-        dist = torch.sqrt(y_idx ** 2 + x_idx ** 2)                    # [H, W]
-        mask = (dist >= self.r0).float().unsqueeze(0)                  # [1, H, W]
+        r0_scaled = max(4, int(self.r0 * min(H, W) / 256.0))
+        yy = torch.arange(H, device=x.device, dtype=torch.float32) - cy
+        xx = torch.arange(W, device=x.device, dtype=torch.float32) - cx
+        grid_y, grid_x = torch.meshgrid(yy, xx, indexing="ij")
+        dist = torch.hypot(grid_x, grid_y)
+        mask = (dist >= r0_scaled).float().unsqueeze(0)  # [1, H, W]
 
-        # Áp mask
-        fft_filtered = fft_shifted * mask                              # [B, H, W] complex
+        fft_filtered = fft_shifted * mask
 
-        # iFFT → ảnh không gian
-        ifft_shifted = torch.fft.ifftshift(fft_filtered, dim=(-2, -1))
-        recon = torch.fft.ifft2(ifft_shifted).real                    # [B, H, W]
+        # Channel 0: High-pass spatial residual WITHOUT per-sample min-max collapse
+        recon = torch.fft.ifft2(torch.fft.ifftshift(fft_filtered, dim=(-2, -1))).real
+        recon_log = torch.sign(recon) * torch.log1p(torch.abs(recon) * 25.0)
 
-        # Normalize [−1, 1] → [0, 1] per sample
-        recon_min = recon.view(B, -1).min(dim=1)[0].view(B, 1, 1)
-        recon_max = recon.view(B, -1).max(dim=1)[0].view(B, 1, 1)
-        recon_norm = (recon - recon_min) / (recon_max - recon_min + 1e-8)
+        # Channel 1: Global-scale log1p FFT magnitude (preserves real 1/f vs AI spectral energy gap)
+        spec_mag = torch.log1p(torch.abs(fft_filtered))
 
-        return recon_norm.unsqueeze(1)                                 # [B, 1, H, W]
+        return torch.stack([recon_log, spec_mag], dim=1)  # [B, 2, H, W]
 
 
 class FrequencyBranch(nn.Module):
     """
-    Nhánh tần số đầy đủ: HPF Layer → 3-layer CNN → Feature vector.
-    
-    Architecture detail:
-        HPF(r0=16) → Conv(1→32, k=3) → BN → ReLU →
-                      Conv(32→64, k=3, stride=2) → BN → ReLU →
-                      Conv(64→128, k=3, stride=2) → BN → ReLU →
-                      AdaptiveAvgPool(1×1) → Flatten → Linear(128→out_features)
+    Native-resolution Frequency Branch:
+      HighPassFFTLayer (2ch) -> BatchNorm2d -> 3-layer ConvNet -> AdaptiveAvgPool -> Linear(128, out_features)
     """
 
-    def __init__(self, r0: int = 16, out_features: int = 128):
-        """
-        Args:
-            r0:           Bán kính high-pass cutoff
-            out_features: Kích thước vector đặc trưng đầu ra
-        """
+    def __init__(self, r0: int = 16, out_features: int = 128, native_crop_size: int = 128):
         super().__init__()
+        self.native_crop_size = native_crop_size
         self.hpf = HighPassFFTLayer(r0=r0)
 
-        self.cnn = nn.Sequential(
-            # Layer 1: 1 → 32 channels, capture local frequency patterns
-            nn.Conv2d(1, 32, kernel_size=3, padding=1, bias=False),
-            nn.BatchNorm2d(32),
-            nn.ReLU(inplace=True),
+        # Global learned normalization across dataset (replaces per-sample min-max!)
+        self.input_bn = nn.BatchNorm2d(2)
 
-            # Layer 2: 32 → 64, stride=2 (downsample H/2, W/2)
+        self.cnn = nn.Sequential(
+            nn.Conv2d(2, 32, kernel_size=3, padding=1, bias=False),
+            nn.BatchNorm2d(32),
+            nn.GELU(),
             nn.Conv2d(32, 64, kernel_size=3, stride=2, padding=1, bias=False),
             nn.BatchNorm2d(64),
-            nn.ReLU(inplace=True),
-
-            # Layer 3: 64 → 128, stride=2 (downsample H/4, W/4)
+            nn.GELU(),
             nn.Conv2d(64, 128, kernel_size=3, stride=2, padding=1, bias=False),
             nn.BatchNorm2d(128),
-            nn.ReLU(inplace=True),
+            nn.GELU(),
         )
 
         self.pool = nn.AdaptiveAvgPool2d((1, 1))
-        self.fc   = nn.Linear(128, out_features)
+        self.fc = nn.Linear(128, out_features)
         self.out_features = out_features
+
+    def _center_crop_native(self, x: torch.Tensor) -> torch.Tensor:
+        _, _, H, W = x.shape
+        cs = self.native_crop_size
+        if H == cs and W == cs:
+            return x
+        if H < cs or W < cs:
+            pad_h = max(0, cs - H)
+            pad_w = max(0, cs - W)
+            x = F.pad(x, (pad_w // 2, pad_w - pad_w // 2, pad_h // 2, pad_h - pad_h // 2), mode="reflect")
+            _, _, H, W = x.shape
+        y0 = (H - cs) // 2
+        x0 = (W - cs) // 2
+        return x[:, :, y0 : y0 + cs, x0 : x0 + cs]
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """
         Args:
-            x: [B, 3, H, W]
+            x: [B, 3, H, W] at native image resolution (not bilinear-resized!)
         Returns:
             feat: [B, out_features]
         """
-        hpf_map = self.hpf(x)             # [B, 1, H, W]
-        feat_map = self.cnn(hpf_map)      # [B, 128, H/4, W/4]
-        pooled = self.pool(feat_map)       # [B, 128, 1, 1]
-        flat = pooled.view(pooled.size(0), -1)  # [B, 128]
-        out = self.fc(flat)               # [B, out_features]
-        return out
+        x_crop = self._center_crop_native(x)
+        hpf_2ch = self.hpf(x_crop)              # [B, 2, cs, cs]
+        hpf_norm = self.input_bn(hpf_2ch)       # Global BN preserves inter-sample amplitude gap
+        feat_map = self.cnn(hpf_norm)           # [B, 128, cs/4, cs/4]
+        pooled = self.pool(feat_map).flatten(1) # [B, 128]
+        return self.fc(pooled)
 
-    def get_hpf_visualization(self, x: torch.Tensor):
-        """
-        Trả về ảnh HPF grayscale dưới dạng numpy để visualize trong notebook.
-        
-        Returns:
-            np.ndarray [H, W] ∈ [0, 1]
-        """
+    def get_hpf_visualization(self, x: torch.Tensor) -> np.ndarray:
         with torch.no_grad():
-            hpf_map = self.hpf(x)                             # [B, 1, H, W]
-        return hpf_map[0, 0].cpu().numpy()                    # [H, W]
+            hpf_2ch = self.hpf(self._center_crop_native(x))
+            arr = torch.abs(hpf_2ch[0, 0]).cpu().numpy()
+            arr = (arr - arr.min()) / (arr.max() - arr.min() + 1e-8)
+        return arr
 
 
-# ------------------------------------------------------------------ #
-#  Utility: FFT power spectrum (cho visualization trong app.py)       #
-# ------------------------------------------------------------------ #
-def compute_fft_power_spectrum(pil_image, size: int = 256) -> np.ndarray:
+def compute_fft_power_spectrum(pil_image, size: int = 128) -> np.ndarray:
     """
-    Tính phổ năng lượng Fourier 2D (log scale), trả về numpy [size, size] ∈ [0, 255].
-    
-    Dùng để so sánh trực quan giữa ảnh thật và AI trong notebook.
+    Computes 2D-FFT log-magnitude spectrum on a high-pass denoised NATIVE patch
+    (without bilinear resizing that erases generative upsampling peaks).
     """
-    from PIL import Image
-    import numpy as np
-
-    gray = np.array(pil_image.convert("L").resize((size, size)), dtype=np.float32)
-    fft = np.fft.fft2(gray)
-    fft_shifted = np.fft.fftshift(fft)
-    power = np.log(np.abs(fft_shifted) ** 2 + 1e-7)
-    power_norm = (power - power.min()) / (power.max() - power.min() + 1e-8)
-    return (power_norm * 255).astype(np.uint8)
+    rgb = np.array(pil_image.convert("RGB"), dtype=np.float64)
+    gray = 0.299 * rgb[:, :, 0] + 0.587 * rgb[:, :, 1] + 0.114 * rgb[:, :, 2]
+    _, log_uint8 = compute_native_2d_fft(gray, max_patch_size=size)
+    return log_uint8
 
 
 if __name__ == "__main__":
-    print("FrequencyBranch — standalone test")
-    model = FrequencyBranch(r0=16, out_features=128)
-    dummy = torch.rand(2, 3, 224, 224)
-    out = model(dummy)
-    print(f"Input shape:  {dummy.shape}")
-    print(f"Output shape: {out.shape}")   # Expected: [2, 128]
-    print("OK — FrequencyBranch hoạt động bình thường.")
+    print("Patched FrequencyBranch — standalone check")
+    model = FrequencyBranch(r0=16, out_features=128, native_crop_size=128)
+    dummy_highres = torch.rand(2, 3, 512, 512)
+    out = model(dummy_highres)
+    print(f"Input shape: {dummy_highres.shape} -> Output shape: {out.shape}")
+    assert out.shape == (2, 128)
+    print("OK — amplitude-preserving FrequencyBranch works.")
