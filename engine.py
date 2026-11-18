@@ -379,10 +379,13 @@ class CoSpyEngine:
             elif prob_trained_head is not None:
                 prob = 0.50 * prob_trained_head + 0.50 * prob_md
             else:
-                # Calibrated fallback: rely primarily on verified Multi-Domain CAGU
-                # and gently incorporate VAE artifact under uncompressed conditions
-                vae_weight = 0.10 if cagu_stats["compression_mode"] == "heavy_jpeg" else 0.18
-                prob = (1.0 - vae_weight) * prob_md + vae_weight * prob_sd
+                # Calibrated fallback: rely primarily on verified Multi-Domain CAGU.
+                # In heavy JPEG mode, VAE artifact classifier is uncalibrated and ignored.
+                if cagu_stats["compression_mode"] == "heavy_jpeg":
+                    prob = prob_md
+                else:
+                    vae_weight = 0.08
+                    prob = (1.0 - vae_weight) * prob_md + vae_weight * prob_sd
 
             prob = float(max(0.0, min(1.0, prob)))
             res_hm_pil, gradcam_pil = self._build_native_heatmaps(md_res, np_rgb, cv_cmap, gain)

@@ -279,14 +279,14 @@ def predict_multi_domain_cagu(rgb_uint8: np.ndarray) -> Dict[str, object]:
     spectral_rolloff = _sigmoid((1.09 - hi_mid) * 6.0)
     spectral_peak = _sigmoid((peak_med - 4.35) * 1.1)
     if compression_mode == "heavy_jpeg":
-        freq_score = _clamp01(0.65 * spectral_peak + 0.35 * _sigmoid((1.55 - mid_low) * 2.5))
+        freq_score = _clamp01(0.50 * spectral_peak + 0.30 * _sigmoid((1.55 - mid_low) * 2.5) + 0.20 * spectral_rolloff)
     else:
         freq_score = _clamp01(0.65 * spectral_rolloff + 0.35 * spectral_peak)
 
     # Branch B: Spatial Sensor Noise & Kurtosis
     flux_smooth_sig = _sigmoid((9.8 - sm_noise) * 0.65) * _sigmoid((kurt - 22.0) * 0.14)
-    depressed_kurt_sig = _sigmoid((10.5 - kurt) * 0.65) * _sigmoid((sm_noise - 10.5) * 0.45)
-    spatial_score = _clamp01(max(flux_smooth_sig, depressed_kurt_sig * 0.92))
+    depressed_kurt_sig = _sigmoid((10.8 - kurt) * 0.75)
+    spatial_score = _clamp01(max(flux_smooth_sig, depressed_kurt_sig * 0.88))
 
     # Branch C: Chrominance & Bayer Channel Coherence
     mean_corr = 0.5 * (corr_rg + corr_gb)
@@ -299,9 +299,9 @@ def predict_multi_domain_cagu(rgb_uint8: np.ndarray) -> Dict[str, object]:
     )
 
     # Quality-Aware CAGU Dynamic Weights
-    raw_w_sp = 0.42 if compression_mode == "heavy_jpeg" else 0.32
-    raw_w_fr = 0.36 if compression_mode == "heavy_jpeg" else 0.33
-    raw_w_ch = 0.06 if is_mono_or_low_sat else (0.22 if compression_mode == "heavy_jpeg" else 0.35)
+    raw_w_sp = 0.35 if compression_mode == "heavy_jpeg" else 0.32
+    raw_w_fr = 0.33 if compression_mode == "heavy_jpeg" else 0.33
+    raw_w_ch = 0.06 if is_mono_or_low_sat else (0.32 if compression_mode == "heavy_jpeg" else 0.35)
 
     if min(w, h) >= 900 and compression_mode == "uncompressed":
         raw_w_sp = 0.36
@@ -320,13 +320,13 @@ def predict_multi_domain_cagu(rgb_uint8: np.ndarray) -> Dict[str, object]:
     high_agree = sum(1 for s in active_signals if s > 0.58)
     low_agree = sum(1 for s in active_signals if s < 0.35)
     strong_optical_bayer = (not is_mono_or_low_sat) and (
-        (chroma_score < 0.18 and chr_lum > 0.20) or (min_corr < 0.92 and chr_lum > 0.145)
+        (chroma_score < 0.15 and chr_lum > 0.18) or (min_corr < 0.91 and chr_lum > 0.16)
     )
 
     consistency_factor = 1.0
-    if strong_optical_bayer and not (compression_mode == "heavy_jpeg" and spatial_score > 0.75):
-        consistency_factor = 0.72
-        prob_ai = _clamp01(fused_raw * 0.65)
+    if strong_optical_bayer:
+        consistency_factor = 0.50
+        prob_ai = _clamp01(fused_raw * 0.45)
     elif high_agree >= 2:
         consistency_factor = 1.12
         prob_ai = _clamp01(0.55 + (fused_raw - 0.42) * 1.38)
