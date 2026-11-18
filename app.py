@@ -1,5 +1,6 @@
 import os
 import sys
+import html as py_html
 import streamlit as st
 from PIL import Image
 import numpy as np
@@ -548,7 +549,6 @@ with tab_inspect:
                 unsafe_allow_html=True
             )
 
-            import html as py_html
             analysis_log = _build_analysis_log(res, threshold=threshold)
 
             verdict_color = "#F43F5E" if is_ai_verdict else "#10B981"
