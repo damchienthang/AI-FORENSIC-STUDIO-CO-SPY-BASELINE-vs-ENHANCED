@@ -411,45 +411,49 @@ with tab_inspect:
             
             # --- VERDICT DISPLAY ---
             if is_ai_verdict:
-                st.markdown(f"""
-                <div class="verdict-box-ai">
-                    <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-                        <div>
-                            <div class="verdict-title" style="color: #F43F5E;">
-                                PHÁT HIỆN: ẢNH DO AI TẠO SINH
-                            </div>
-                            <div style="color: #CBD5E1; font-size: 0.95rem; margin-top: 4px; max-width: 650px;">
-                                {res["verdict_reasoning"]}
-                            </div>
-                        </div>
-                        <div style="text-align: right;">
-                            <div style="font-size: 0.8rem; font-family: 'JetBrains Mono', monospace; color: #94A3B8;">XÁC SUẤT TẠO SINH</div>
-                            <div class="verdict-prob" style="color: #F43F5E;">{p_ai * 100:.2f}%</div>
-                            <div style="font-size: 0.75rem; color: #64748B;">Ngưỡng chuẩn: {threshold * 100:.0f}%</div>
-                        </div>
-                    </div>
-                </div>
-                """, unsafe_allow_html=True)
+                box_html = (
+                    f'<div class="verdict-box-ai">'
+                    f'<div style="display: flex; justify-content: space-between; align-items: flex-start;">'
+                    f'<div>'
+                    f'<div class="verdict-title" style="color: #F43F5E;">'
+                    f'PHÁT HIỆN: ẢNH DO AI TẠO SINH'
+                    f'</div>'
+                    f'<div style="color: #CBD5E1; font-size: 0.95rem; margin-top: 4px; max-width: 650px;">'
+                    f'{py_html.escape(str(res.get("verdict_reasoning", "")))}'
+                    f'</div>'
+                    f'</div>'
+                    f'<div style="text-align: right;">'
+                    f'<div style="font-size: 0.8rem; font-family: \'JetBrains Mono\', monospace; color: #94A3B8;">XÁC SUẤT TẠO SINH</div>'
+                    f'<div class="verdict-prob" style="color: #F43F5E;">{p_ai * 100:.2f}%</div>'
+                    f'<div style="font-size: 0.75rem; color: #64748B;">Ngưỡng chuẩn: {threshold * 100:.0f}%</div>'
+                    f'</div>'
+                    f'</div>'
+                    f'</div>'
+                )
             else:
-                st.markdown(f"""
-                <div class="verdict-box-real">
-                    <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-                        <div>
-                            <div class="verdict-title" style="color: #10B981;">
-                                 XÁC NHẬN: ẢNH CHỤP QUANG HỌC TỰ NHIÊN
-                            </div>
-                            <div style="color: #CBD5E1; font-size: 0.95rem; margin-top: 4px; max-width: 650px;">
-                                {res["verdict_reasoning"]}
-                            </div>
-                        </div>
-                        <div style="text-align: right;">
-                            <div style="font-size: 0.8rem; font-family: 'JetBrains Mono', monospace; color: #94A3B8;">ĐỘ TIN CẬY ẢNH THẬT</div>
-                            <div class="verdict-prob" style="color: #10B981;">{(1.0 - p_ai) * 100:.2f}%</div>
-                            <div style="font-size: 0.75rem; color: #64748B;">Ngưỡng chuẩn: {threshold * 100:.0f}%</div>
-                        </div>
-                    </div>
-                </div>
-                """, unsafe_allow_html=True)
+                box_html = (
+                    f'<div class="verdict-box-real">'
+                    f'<div style="display: flex; justify-content: space-between; align-items: flex-start;">'
+                    f'<div>'
+                    f'<div class="verdict-title" style="color: #10B981;">'
+                    f'XÁC NHẬN: ẢNH CHỤP QUANG HỌC TỰ NHIÊN'
+                    f'</div>'
+                    f'<div style="color: #CBD5E1; font-size: 0.95rem; margin-top: 4px; max-width: 650px;">'
+                    f'{py_html.escape(str(res.get("verdict_reasoning", "")))}'
+                    f'</div>'
+                    f'</div>'
+                    f'<div style="text-align: right;">'
+                    f'<div style="font-size: 0.8rem; font-family: \'JetBrains Mono\', monospace; color: #94A3B8;">ĐỘ TIN CẬY ẢNH THẬT</div>'
+                    f'<div class="verdict-prob" style="color: #10B981;">{(1.0 - p_ai) * 100:.2f}%</div>'
+                    f'<div style="font-size: 0.75rem; color: #64748B;">Ngưỡng chuẩn: {threshold * 100:.0f}%</div>'
+                    f'</div>'
+                    f'</div>'
+                    f'</div>'
+                )
+            if hasattr(st, "html"):
+                st.html(box_html)
+            else:
+                st.markdown(box_html, unsafe_allow_html=True)
                 
             # --- MULTI-SPECTRAL FORENSIC VIEWPORT ---
             st.markdown("#### Kính Khám Nghiệm Đa Tầng (Multi-stage Forensic Viewport)")
@@ -523,12 +527,16 @@ with tab_inspect:
             tel_cols = st.columns(len(metric_items))
             for i, (m_label, m_val) in enumerate(metric_items):
                 with tel_cols[i]:
-                    st.markdown(f"""
-                    <div class="telemetry-cell">
-                        <div class="telemetry-title">{m_label.upper()}</div>
-                        <div class="telemetry-val">{m_val}</div>
-                    </div>
-                    """, unsafe_allow_html=True)
+                    cell_html = (
+                        f'<div class="telemetry-cell">'
+                        f'<div class="telemetry-title">{py_html.escape(m_label.upper())}</div>'
+                        f'<div class="telemetry-val">{py_html.escape(str(m_val))}</div>'
+                        f'</div>'
+                    )
+                    if hasattr(st, "html"):
+                        st.html(cell_html)
+                    else:
+                        st.markdown(cell_html, unsafe_allow_html=True)
 
             # --- FORENSIC ANALYSIS LOG ---
             st.markdown("<div style='height: 20px;'></div>", unsafe_allow_html=True)
@@ -540,37 +548,49 @@ with tab_inspect:
                 unsafe_allow_html=True
             )
 
+            import html as py_html
             analysis_log = _build_analysis_log(res, threshold=threshold)
-
-            # Render log panel
-            entries_html = ""
-            for entry in analysis_log:
-                lvl = entry["level"]
-                entries_html += f"""
-                <div class="log-entry log-{lvl}">
-                    <div class="log-entry-icon">{entry["icon"]}</div>
-                    <div class="log-entry-body">
-                        <div class="log-entry-title">{entry["title"]}</div>
-                        <div class="log-entry-detail">{entry["detail"]}</div>
-                    </div>
-                    <div class="log-entry-value">{entry["value"]}</div>
-                </div>"""
 
             verdict_color = "#F43F5E" if is_ai_verdict else "#10B981"
             verdict_label = "AI DETECTED" if is_ai_verdict else "AUTHENTIC"
 
-            st.markdown(f"""
-            <div class="log-panel">
-                <div class="log-header">
-                    <span style="color:{verdict_color}; font-weight:700;">▌</span>
-                    FORENSIC DECISION LOG
-                    <span style="margin-left:auto; color:{verdict_color}; font-weight:700;">
-                        {verdict_label} — {p_ai*100:.2f}%
-                    </span>
-                </div>
-                {entries_html}
-            </div>
-            """, unsafe_allow_html=True)
+            # Render log panel: using st.html and unindented HTML so markdown parser never treats it as code block
+            entries_parts = []
+            for entry in analysis_log:
+                lvl = entry.get("level", "info")
+                icon = entry.get("icon", "ℹ️")
+                title = py_html.escape(str(entry.get("title", "")))
+                detail = py_html.escape(str(entry.get("detail", "")))
+                val = py_html.escape(str(entry.get("value", "")))
+                entries_parts.append(
+                    f'<div class="log-entry log-{lvl}">'
+                    f'<div class="log-entry-icon">{icon}</div>'
+                    f'<div class="log-entry-body">'
+                    f'<div class="log-entry-title">{title}</div>'
+                    f'<div class="log-entry-detail">{detail}</div>'
+                    f'</div>'
+                    f'<div class="log-entry-value">{val}</div>'
+                    f'</div>'
+                )
+
+            entries_html = "".join(entries_parts)
+            log_panel_html = (
+                f'<div class="log-panel">'
+                f'<div class="log-header">'
+                f'<span style="color:{verdict_color}; font-weight:700;">▌</span> '
+                f'<span>FORENSIC DECISION LOG</span>'
+                f'<span style="margin-left:auto; color:{verdict_color}; font-weight:700;">'
+                f'{verdict_label} — {p_ai*100:.2f}%'
+                f'</span>'
+                f'</div>'
+                f'{entries_html}'
+                f'</div>'
+            )
+
+            if hasattr(st, "html"):
+                st.html(log_panel_html)
+            else:
+                st.markdown(log_panel_html, unsafe_allow_html=True)
 
 with tab_theory:
     st.markdown("### Bản Chất Khoa Học Của Phương Pháp Bóc Tách Vết Tích VAE")
