@@ -1,0 +1,28 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+**/*.pyc
+**/__pycache__/**
+
+# Pretrained model weights (>50MB, not allowed on GitHub)
+**/pretrained/**
+Co-Spy/pretrained/**
+*.pth
+*.pt
+*.bin
+*.zip
+*.tar.gz
+
+# Microsoft Word & Office temporary files
+~$*
+*.tmp
+
+# Jupyter Checkpoints
+.ipynb_checkpoints/
+**/.ipynb_checkpoints/**
+
+# Virtual Environments
+venv/
+.venv/
+env/
