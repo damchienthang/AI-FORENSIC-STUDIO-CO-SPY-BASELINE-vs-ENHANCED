@@ -439,116 +439,113 @@ def create_document():
 
     slides = [
         (
-            "Slide 1: Trang Tiêu Đề & Giới Thiệu Nhóm",
-            "• Tên đề tài: Nghiên cứu & Nâng Cấp Hệ Thống Bóc Tách Vết Tích Ảnh AI Tạo Sinh (CO-SPY Enhanced v2)\n"
-            "• Kế thừa công trình: CVPR 2025 (arXiv:2503.18286)\n"
-            "• Giảng viên hướng dẫn & Sinh viên thực hiện: Nhóm 17\n"
-            "• Đơn vị: Học viện Công nghệ Bưu chính Viễn thông (PTIT)",
-            "Logo PTIT, Banner đồ họa AI Forensic Studio, Hình chụp giao diện Web Studio.",
-            "Kính thưa các thầy cô trong Hội đồng, hôm nay nhóm 17 xin được báo cáo đề tài nghiên cứu và cải tiến hệ thống giám định ảnh AI tạo sinh dựa trên bài báo đỉnh cao tại CVPR 2025 CO-SPY."
+            "Slide 1: Chào Sân & Giới Thiệu Đề Tài",
+            "• Đề tài: Nhận diện ảnh AI tạo sinh & Nâng cấp mô hình CO-SPY (CVPR 2025)\n"
+            "• Tên hệ thống: AI Forensic Studio — CO-SPY Enhanced v2\n"
+            "• Thực hiện: Nhóm 17 — Học viện Công nghệ Bưu chính Viễn thông (PTIT)\n"
+            "• Trọng tâm: Bóc trần ảnh AI siêu thực kể cả khi bị gửi qua mạng xã hội, bị nén mờ tịt.",
+            "Giao diện Web Dark Mode công nghệ cao, Logo PTIT, Biểu tượng kính hiển vi bóc tách ảnh giả mạo.",
+            "Em chào thầy cô và các bạn! Hôm nay nhóm 17 xin phép được trình bày đề tài: 'Bóc trần ảnh do AI tạo ra'. Xuất phát từ một bài báo cực kỳ đình đám vừa công bố ở hội nghị CVPR 2025 tên là CO-SPY, nhóm em đã mổ xẻ, tìm ra lỗ hổng chí mạng của nó trong thực tế và tự tay phát triển một phiên bản nâng cấp xịn hơn, giúp bắt dính ảnh AI ngay cả khi ảnh đã bị gửi qua Facebook hay Zalo nén mờ tịt."
         ),
         (
-            "Slide 2: Đặt Vấn Đề — Thách Thức Từ Kỷ Nguyên Tạo Sinh",
-            "• Sự trỗi dậy mạnh mẽ của các mô hình khuếch tán: Midjourney v6, FLUX.1-dev, SDXL.\n"
-            "• Độ chân thực thị giác vượt qua mắt thường: Da người siêu mịn, ánh sáng quang học hoàn hảo.\n"
-            "• Nguy cơ xã hội: Tin giả chính trị, lừa đảo tài chính, thao túng truyền thông mạng xã hội.\n"
-            "• Hạn chế của các phương pháp cũ: Chỉ bắt được vết cắt ghép nông hoặc deepfake mặt người, bất lực trước ảnh nguyên khối sinh từ văn bản (text-to-image).",
-            "Biểu đồ so sánh chất lượng ảnh AI qua các năm (2021 đến 2026), các vụ việc tin giả viral trên mạng xã hội.",
-            "Thưa thầy cô, mắt người hiện nay gần như không thể phân biệt ảnh FLUX hay Midjourney bằng mắt thường. Nhu cầu cấp thiết đặt ra là phải có một công cụ toán học và quang học bóc trần bản chất tạo sinh của bức ảnh."
+            "Slide 2: Khi Mắt Thường Đã Hoàn Toàn Bất Lực Trước Ảnh AI",
+            "• AI vẽ ảnh (Midjourney v6, FLUX.1) giờ quá đỉnh: Da người có chân lông tơ, nếp nhăn, ánh sáng chân thực 100%.\n"
+            "• Mắt thường nhìn lướt qua: Chịu chết, không thể nào phân biệt nổi với ảnh chụp máy cơ!\n"
+            "• Hậu quả ngoài đời: Tin giả giật gân, lừa đảo chuyển tiền, bôi nhọ uy tín trên Facebook, TikTok tràn lan.\n"
+            "• Phần mềm cũ bó tay: Ngày xưa chỉ bắt được ảnh cắt ghép thủ công, còn giờ ảnh AI nó vẽ mới toanh từ đầu thì chịu cứng.",
+            "Đặt 2 ảnh cạnh nhau (1 ảnh chụp thật, 1 ảnh AI vẽ) đố khán giả nhận ra; Ảnh chụp màn hình các vụ lừa đảo deepfake nhức nhối gần đây.",
+            "Mọi người hãy nhìn hai bức ảnh trên màn hình: từ sợi tóc, nếp nhăn cho tới ánh mắt đều sống động như thật. Giờ bảo phân biệt bằng mắt thường thì thú thật là chịu chết! Khi ảnh AI tràn ngập mạng xã hội, nó kéo theo vấn nạn tin giả và lừa đảo tống tiền. Những phần mềm phát hiện cắt ghép ngày xưa giờ vô dụng vì ảnh AI được vẽ mới tinh từ đầu. Chúng ta bắt buộc phải có một công cụ thông minh hơn để vạch mặt chúng."
         ),
         (
-            "Slide 3: Khảo Sát Mô Hình Gốc CO-SPY (CVPR 2025)",
-            "• Ý tưởng đột phá của bài báo gốc: Khảo sát đa tạp tiềm ẩn VAE (Latent Manifold).\n"
-            "• Công thức sai phân tái tạo: Δ = |x - D(E(x))|.\n"
-            "• Ảnh AI vốn sinh ra từ bộ giải mã D của VAE, nên khi tái tạo lại sẽ có sai phân Δ rất nhỏ và mượt mà.\n"
-            "• Ảnh thật chứa nhiễu vật lý tự nhiên, khi ép qua bottleneck nén 8x sẽ bị phân kỳ sai số lớn (Δ_Real >> Δ_AI).",
-            "Sơ đồ luồng nén VAE Encoder -> Bottleneck -> Decoder -> ResNet-50 Classifier từ bài báo gốc CVPR 2025.",
-            "CO-SPY gốc có một ý tưởng rất hay: dùng chính bộ nén VAE của Stable Diffusion làm 'kính hiển vi'. Ảnh AI sinh ra từ VAE thì VAE tái tạo lại rất dễ, còn ảnh thật thì VAE tái tạo bị lỗi."
+            "Slide 3: Ý Tưởng Siêu Hay Của Bài Báo Gốc CO-SPY (CVPR 2025)",
+            "• Đòn bẩy thông minh: 'Lấy độc trị độc' — Dùng chính bộ nén ảnh VAE của AI để đi bắt AI.\n"
+            "• Nguyên lý 'gà nhà': Ảnh AI vốn sinh ra từ bộ giải mã VAE -> Cho nén lại rồi giải nén ra thì mượt mà, sai số cực kỳ bé.\n"
+            "• Ảnh chụp thật: Chứa nhiễu hạt vật lý tự nhiên của ống kính -> Bị bộ nén ép lại sẽ méo mó, bung sai số to đùng.\n"
+            "• Cách phán đoán: Đo độ chênh lệch sai số (Δ) — Lệch tí ti là Ảnh AI; Lệch nhiều là Ảnh thật.",
+            "Sơ đồ trực quan kiểu hoạt hình: Ảnh thật đi qua máy nén bị móp méo văng miểng, còn ảnh AI chui qua thì trơn tuột như cá gặp nước.",
+            "Thế là đầu năm 2025, các nhà nghiên cứu ra mắt mô hình CO-SPY với một ý tưởng cực kỳ thông minh: 'Lấy độc trị độc'. Vì hầu hết ảnh AI như Stable Diffusion đều được sinh ra từ một bộ nén giải mã gọi là VAE, nên nếu ta nhét bức ảnh ngược lại vào cái VAE đấy: nếu là 'gà nhà' do AI vẽ, nó sẽ tái tạo lại trơn tru không tì vết. Còn nếu là ảnh thật chụp từ máy ảnh, chui qua cái nén này sẽ bị méo mó, sai lệch thấy rõ. Nhờ đo độ chênh lệch này mà mô hình biết ảnh nào là thật, ảnh nào là giả."
         ),
         (
-            "Slide 4: Lỗ Hổng Chí Mạng Của Bài Báo Gốc (The Compression Collapse)",
-            "• Lỗ hổng 1: Bị 'mù' trước nén lossy JPEG mạng xã hội (Facebook/Zalo/Reddit).\n"
-            "• Thuật toán nén DCT của JPEG xóa sạch các vết tích micro-pixel mỏng của VAE.\n"
-            "• Độ nhạy (Recall) tụt từ 99% xuống chỉ còn 50% (bỏ lọt một nửa số ảnh giả).\n"
-            "• Nghịch lý thực nghiệm: Báo nhầm ảnh meme AI con mèo và con ngựa là 'Ảnh thật 88%'.\n"
-            "• Lỗ hổng 2: Hộp đen (Black-box), không chỉ ra được vùng bị giả mạo.",
-            "Hình ảnh so sánh: Vết tích VAE rõ trên ảnh gốc nhưng biến mất hoàn toàn sau khi nén JPEG q=50; Ảnh chụp màn hình lỗi báo nhầm ảnh meme.",
-            "Tuy nhiên, khi thử nghiệm thực tế với ảnh trên mạng, nhóm phát hiện bản gốc sụp đổ hoàn toàn. Nén JPEG xóa sạch sai phân VAE, khiến mô hình báo nhầm ảnh meme AI thành ảnh thật với độ tự tin lên tới 88%."
+            "Slide 4: Nhưng Đời Không Như Là Mơ — Lỗ Hổng Chí Mạng Khi Ra Thực Tế",
+            "• Trong phòng thí nghiệm: Điểm số cao chót vót, bắt gần như tuyệt đối (99%).\n"
+            "• Nhưng ngoài đời thực: Ảnh đăng Facebook, gửi qua Zalo hay Reddit đều bị nén JPEG mờ tịt!\n"
+            "• Cú sốc thực nghiệm: Thuật toán nén JPEG xóa sạch các vết tích sai phân mỏng manh của VAE -> Mô hình bị 'mù', bỏ lọt một nửa số ảnh giả (Recall tụt còn 50%).\n"
+            "• Bị 'hố' nặng trước ảnh meme: Ảnh chế con ngựa đứng cầm iPhone selfie hay mèo AI rõ ràng rành rành mà mô hình quả quyết bảo 'Ảnh thật 88%'!",
+            "Ảnh meme con ngựa cầm iPhone với chữ to đùng: 'Mô hình gốc bảo: THẬT 88%?!'; Biểu đồ nén JPEG làm trôi sạch tín hiệu VAE.",
+            "Ý tưởng trên giấy tờ thì quá hay, nhưng khi nhóm em tải ảnh thực tế trên mạng về test thử thì ôi thôi... mô hình sụp đổ! Tại sao ạ? Vì ảnh trên Facebook hay Zalo đều bị nén JPEG. Thuật toán nén nó vo tròn các điểm ảnh lại, xóa sạch luôn cái sai số mỏng manh của VAE. Kết quả là mô hình gốc bị 'mù'. Đau nhất là khi nhóm em đưa ảnh một con ngựa đang đứng giơ điện thoại chụp selfie — mắt người nhìn phát biết ngay ảnh chế xạo — thế mà mô hình gốc lại khăng khăng chấm 'Ảnh thật 88%'! Rõ ràng không thể đem cái này đi dùng thực tế được."
         ),
         (
-            "Slide 5: Tổng Quan 5 Cải Tiến Đột Phá (CO-SPY Enhanced v2)",
-            "• Nhóm đề xuất kiến trúc Đa miền Native Multi-Domain CAGU giải quyết triệt để điểm yếu của bài báo gốc:\n"
-            "1. Phổ tần số Native 2D-FFT trên patch độ phân giải gốc.\n"
-            "2. Nhận diện tương quan màu & cảm biến quang học Bayer.\n"
-            "3. Thống kê nhiễu vùng phẳng & hệ số nhọn Laplacian Kurtosis.\n"
-            "4. Van điều tiết thích ứng theo chất lượng ảnh CAGU.\n"
-            "5. Bản đồ nhiệt trực quan Explainable AI (Grad-CAM).",
-            "Sơ đồ khối tổng thể kiến trúc Enhanced v2: Đầu vào -> 3 Nhánh (Spatial, Freq, Chroma) -> Khối CAGU Gating -> Đầu ra.",
-            "Để giải quyết triệt để, nhóm đề xuất phiên bản Enhanced v2: không dựa đơn lẻ vào VAE nữa mà kết hợp đồng thời Miền tần số Fourier, Tương quan màu cảm biến Bayer, và Van thích ứng CAGU."
+            "Slide 5: Nâng Cấp Toàn Diện — Bộ 3 'Vũ Khí' Đa Miền Của Nhóm 17",
+            "• Bài học rút ra: Tuyệt đối không 'bỏ hết trứng vào một giỏ' VAE!\n"
+            "• Vũ khí 1 (Tần số Fourier): Soi vết mắt lưới chu kỳ mà thuật toán AI phóng to ảnh để lại.\n"
+            "• Vũ khí 2 (Cảm biến Bayer): Khai thác đặc trưng vật lý của cụm cảm biến máy ảnh cơ mà AI không bao giờ bắt chước được.\n"
+            "• Vũ khí 3 (Độ mịn & Độ nhọn): Bắt bài hiện tượng AI làm mịn giả tạo bề mặt da và nền phẳng.\n"
+            "• Nhạc trưởng thông minh (Van CAGU): Thấy ảnh bị nén mờ thì tự động đổi bài, dồn quyền cho Bayer và Fourier.",
+            "Sơ đồ 3 chiếc kính lúp độc lập (Không gian, Tần số, Màu sắc) cùng hội tụ về Hộp điều phối CAGU để ra phán quyết cuối cùng.",
+            "Thấy lỗ hổng đó, nhóm 17 quyết định không để mô hình 'bỏ hết trứng vào một giỏ' nữa. Bọn em trang bị thêm cho nó 3 chiếc kính lúp độc lập: Một chiếc soi miền tần số sóng Fourier để tìm vết mắt lưới toán học; Một chiếc soi cảm biến màu quang học để tìm vết tích mảng lọc Bayer của máy ảnh; Và một bộ đo độ mịn bề mặt. Đặc biệt, bọn em gắn thêm một 'bộ não điều phối thích ứng' CAGU: hễ thấy ảnh gửi qua Zalo bị nén mờ thì tự động gạt VAE sang một bên và chuyển quyền cho hai chiếc kính lúp còn lại xử lý."
         ),
         (
-            "Slide 6: Phân Tích Chuyên Sâu 1 — Phổ Fourier 2D-FFT & Vết Tích Mắt Lưới",
-            "• Nguyên lý: Các tầng Upsampling / Transposed Conv của mạng tạo sinh luôn để lại vết tích mắt lưới chu kỳ (periodic lattice artifacts).\n"
-            "• Biến đổi Fourier 2D (2D Discrete Fourier Transform) chuyển tín hiệu không gian sang miền tần số.\n"
-            "• Khắc phục lỗi v1: Không resize 256px (tránh làm mờ vết tích); chạy 2D-FFT trên patch gốc 128x128.\n"
-            "• Chỉ số nhận diện: Tỷ số năng lượng cao tần hi_mid_ratio suy giảm bất thường (< 0.70) và các đỉnh phổ định kỳ peak_med_ratio.",
-            "Ảnh trực quan hóa: Phổ Fourier 2D của ảnh thật (suy giảm trơn tru 1/f) đối chiếu với Phổ Fourier của ảnh AI (xuất hiện các gai chói và gãy năng lượng).",
-            "Vết tích nội suy của AI không thể xóa được trong miền tần số. Khi biến đổi Fourier 2D trên ảnh gốc, phổ của ảnh AI xuất hiện các đỉnh chói chu kỳ rất rõ rệt."
+            "Slide 6: Bí Quyết 1 — Soi Sóng Tần Số Fourier Bắt Thóp 'Vết Mắt Lưới' AI",
+            "• Bản chất AI: Để vẽ bức ảnh to từ đoạn mã nhỏ, AI phải dùng các phép phóng to (Upsampling).\n"
+            "• Dấu vết để lại: Luôn có những vết mắt lưới chu kỳ siêu nhỏ đều tăm tắp như lưới mắt cáo (Lattice artifacts).\n"
+            "• Mắt thường không thấy: Nhưng dùng biến đổi Fourier 2D (2D-FFT) quét tần số sẽ thấy ngay các đốm sáng chói định kỳ.\n"
+            "• Cải tiến nhóm làm: Cắt cúp trực tiếp trên ảnh gốc (Patch 128x128), tuyệt đối không co nhỏ ảnh lại kẻo làm mờ mất dấu vết.",
+            "Hình so sánh: Ảnh thật qua Fourier thì lan tỏa êm dịu từ tâm ra ngoài; Còn ảnh AI qua Fourier thì lóe lên các chấm sáng đối xứng lốm đốm rất kỳ quái.",
+            "Bí quyết đầu tiên nằm ở miền tần số. Khi AI vẽ ảnh, nó phải phóng to dần từ một ma trận tí hon lên bức ảnh lớn. Quá trình phóng to này luôn để lại những vết răng cưa mắt lưới chu kỳ đều tăm tắp, giống hệt việc ta đan lưới sắt vậy. Mắt thường ta không thấy, nhưng đưa qua phép biến đổi Fourier 2D thì hiện nguyên hình: ảnh thật năng lượng tản đều rất êm, còn ảnh AI sẽ lóe lên các đốm sáng chu kỳ đối xứng chói lọi. Đây là vết tích toán học không tài nào giấu được."
         ),
         (
-            "Slide 7: Phân Tích Chuyên Sâu 2 — Dấu Vết Cảm Biến Bayer & Khóa Kênh RGB",
-            "• Vũ khí bí mật kháng nén JPEG: Tương quan kênh màu quang học.\n"
-            "• Máy ảnh thật: Ánh sáng đi qua mảng lọc Bayer (R-G-G-B), thuật toán demosaicing sinh ra nhiễu hạt sắc thái độc lập (chroma_to_luma cao: 0.16 - 0.28, min_corr < 0.92).\n"
-            "• AI tạo sinh: Sinh 3 kênh RGB đồng thời từ latent space -> Kênh màu bị khóa chặt phi tự nhiên (min_channel_corr > 0.96 - 0.99) và mất sạch nhiễu sắc độ (chroma_to_luma < 0.10).\n"
-            "• Đặc trưng này hoàn toàn bất biến trước nén JPEG!",
-            "Sơ đồ mảng lọc màu Bayer (CFA) trên cảm biến vật lý; Biểu đồ phân tán (Scatter plot) tương quan R-G-B giữa ảnh thật và ảnh AI.",
-            "Đây chính là chìa khóa then chốt: Camera thật có mảng lọc màu Bayer tạo nhiễu sắc độ tự nhiên. AI sinh bằng toán học nên 3 kênh R-G-B bị khóa chặt vào nhau. Nén JPEG cỡ nào cũng không làm mất được dấu vết này."
+            "Slide 7: Bí Quyết 2 — Dấu Vết Cảm Biến Bayer: 'Khắc Tinh' Của Ảnh Nén Zalo",
+            "• Máy ảnh thật: Ánh sáng đập vào mắt cảm biến có mảng lọc màu Bayer (R-G-G-B) -> Tạo ra các hạt nhiễu màu sắc ngẫu nhiên rất tự nhiên.\n"
+            "• AI vẽ bằng máy tính: Tính toán 3 kênh màu Đỏ - Xanh lá - Xanh dương (RGB) cùng một lúc từ công thức toán -> Ba kênh màu bị dính chặt vào nhau một cách kỳ dị!\n"
+            "• Khám phá đắt giá: Dù ảnh có bị nén JPEG mờ tịt cỡ nào, tỷ lệ dính màu của AI vẫn giữ nguyên ở mức bất thường (>96%).\n"
+            "• Kết luận: Đây chính là 'tấm khiên vàng' giúp hệ thống miễn nhiễm với nén ảnh mạng xã hội!",
+            "Hình cấu tạo mắt cảm biến máy ảnh cơ (mảng ô caro Đỏ - Xanh lá - Xanh dương) đặt cạnh biểu đồ 3 kênh màu của AI bị khóa cứng ngắc.",
+            "Đây chính là 'vũ khí bí mật' tâm đắc nhất của nhóm em: Dấu vết cảm biến quang học! Máy ảnh thật khi chụp, ánh sáng phải đi qua mảng lọc màu vật lý tên là Bayer. Thuật toán ghép màu sẽ sinh ra các hạt nhiễu màu sắc ngẫu nhiên rất tự nhiên. Trong khi đó, AI thì không có cảm biến, nó tính toán 3 màu Đỏ, Xanh lá, Xanh dương cùng một lượt từ ma trận số. Thế nên 3 kênh màu của nó bị 'dính chặt' vào nhau như sinh ba dính liền, cực kỳ gượng gạo! Điều tuyệt vời là dù ảnh có bị gửi qua Facebook hay Zalo nén mờ bao nhiêu lần, bản chất dính màu này không bao giờ mất đi."
         ),
         (
-            "Slide 8: Van Điều Tiết Thích Ứng CAGU & Explainable AI (Grad-CAM)",
-            "• Van CAGU (Channel-wise Adaptive Gating Unit): Tự động đo độ nén JPEG Blockiness 8x8.\n"
-            "• Cơ chế chuyển đổi: Ảnh sạch -> Cân bằng 3 nhánh; Ảnh nén JPEG nặng (>1.22) -> Tự động cắt bỏ VAE, dồn 100% trọng số sang Tần số Fourier & Tương quan Bayer.\n"
-            "• Explainable AI (Grad-CAM): Hook vào layer2[-1] của ResNet-50 Bottleneck, xuất bản đồ nhiệt tô đỏ vùng bị AI can thiệp (móng ngựa, ngón tay dị dạng, mảng da sáp).",
-            "Sơ đồ hoạt động của van CAGU; Bản đồ nhiệt Grad-CAM phủ lên ảnh meme con ngựa chỉ rõ vị trí hooves và smartphone.",
-            "Nhờ van CAGU, hệ thống tự động 'thấy' ảnh bị nén thì giảm tin vào VAE và dồn toàn bộ quyền quyết định cho Bayer và Fourier. Đồng thời Grad-CAM khoanh vùng đỏ đúng vị trí bàn tay biến dạng."
+            "Slide 8: Nhạc Trưởng Thích Ứng CAGU & 'Chỉ Mặt Điểm Tên' Bằng Bản Đồ Nhiệt",
+            "• Nhạc trưởng CAGU: Tự động soi bức ảnh xem có bị nén hay không (đo độ vỡ hạt ô vuông 8x8).\n"
+            "• Xử lý thông minh: Ảnh xịn sắc nét -> Cho cả 3 nhánh cùng biểu quyết; Ảnh nén mờ -> Tự động dồn 100% quyền cho Bayer và Fourier quyết định.\n"
+            "• Giải thích minh bạch (Explainable AI): Không phán bừa như một hộp đen bí hiểm!\n"
+            "• Bản đồ nhiệt Grad-CAM: Tô đỏ rực đúng chỗ AI vẽ lỗi (ngón tay quái dị, móng ngựa cầm điện thoại, mảng da sáp bóng).",
+            "Hình ảnh con ngựa: Phủ lớp bản đồ nhiệt đỏ rực ngay móng chân cầm điện thoại và bờm; Sơ đồ cân đo đong đếm của van CAGU.",
+            "Để kết hợp nhịp nhàng các nhánh, bọn em tạo ra 'nhạc trưởng' CAGU. Nó như một người giám định viên già rơ: cầm bức ảnh lên, thấy sắc nét thì dùng cả 3 phương pháp; thấy ảnh bị nén nát bét thì bảo ngay 'Thôi dẹp VAE sang một bên, để cảm biến Bayer với Fourier lên tiếng'. Chưa hết, hệ thống không phán bừa một con số vô hồn. Nhờ công nghệ Grad-CAM, nó vẽ luôn bản đồ nhiệt đỏ rực, chỉ thẳng vào mặt chỗ giả: 'Chỗ móng ngựa này vẽ sai giải phẫu này, chỗ ngón tay này thừa ngón này', nhìn vào là thuyết phục tuyệt đối!"
         ),
         (
-            "Slide 9: Kết Quả Thực Nghiệm Định Lượng (Benchmark)",
-            "• Đánh giá trên tập kiểm chuẩn chuẩn mực 29 ảnh đa nguồn (COCO, SD1.5, FLUX, Degraded):\n"
-            "• Accuracy: Tăng từ 70.0% lên 96.15% (+26.15%).\n"
-            "• Recall bắt ảnh AI: Tăng từ 50.0% lên 100.0% (Bắt trúng 17/17 ảnh AI, không bỏ sót ca nào).\n"
-            "• F1-Score: Đạt 0.9714 (so với 0.6250 của bản gốc).\n"
-            "• AUC-ROC: Đạt 0.9673 (phân tách vượt trội giữa phân bố thật và giả).",
-            "Bảng số liệu 7 chỉ số so sánh; Biểu đồ cột thể hiện mức nhảy vọt của Recall (+50%) và F1-Score.",
-            "Số liệu thực nghiệm khẳng định sự vượt trội: Độ chính xác toàn diện đạt 96.15%, và quan trọng nhất là độ nhạy bắt ảnh AI đạt tuyệt đối 100%, khắc phục hoàn toàn hiện tượng bỏ sót của bản gốc."
+            "Slide 9: 'Nói Có Sách, Mách Có Chứng' — Kết Quả Đo Lường Thuyết Phục",
+            "• Đem thử lửa trên 29 bức ảnh hóc búa nhất: Trộn lẫn ảnh chụp thật, ảnh AI đủ loại (Stable Diffusion, FLUX, Midjourney) và ảnh nén mờ tịt.\n"
+            "• Tỷ lệ phát hiện ảnh AI (Recall): Tăng vọt từ 50% lên đúng 100%! Bắt trúng toàn bộ 17/17 ảnh AI, không lọt lưới bất kỳ tấm nào!\n"
+            "• Độ chính xác tổng thể: Tăng vọt từ 70% lên tận 96.15% (+26%).\n"
+            "• F1-Score & AUC: Đạt mức gần như lý tưởng (>0.96), vượt trội hoàn toàn so với mô hình gốc CVPR 2025.",
+            "Biểu đồ cột trực quan so sánh bản Gốc (thấp lè tè màu đỏ) và bản Cải tiến (cao ngút ngàn màu xanh); Bảng số liệu benchmark nổi bật con số 100%.",
+            "Nói hay không bằng làm thật, bọn em đã mang hai phiên bản ra so găng trên tập dữ liệu 29 bức ảnh hóc búa, đủ mọi thể loại từ sắc nét đến nén nát. Kết quả thật sự ấn tượng: Ở bản gốc, tỷ lệ bắt trúng ảnh AI chỉ được 50% — tức là tung đồng xu may rủi, lọt lưới một nửa! Sang bản cải tiến của nhóm 17, tỷ lệ này vọt thẳng lên 100% — bắt dính 17 trên 17 bức ảnh AI, không sót một tấm nào! Độ chính xác chung cũng nhảy vọt từ 70% lên hơn 96%."
         ),
         (
-            "Slide 10: Minh Chứng Bắt Trúng 100% Các Ca Khó (Meme Case Studies)",
-            "• Ca 1 (Meme Mèo đen vươn tay): Bản gốc báo Thật 88.2% -> Bản Enhanced v2 báo AI 70.1% (Chính xác, Lead: Smooth Noise & Kurtosis).\n"
-            "• Ca 2 (Meme Ngựa cầm iPhone selfie 1): Bản gốc báo Thật 71.4% -> Bản Enhanced v2 báo AI 100.0% (Chính xác, Lead: Chroma & Bayer Coherence).\n"
-            "• Ca 3 (Meme Ngựa selfie 2): Bản gốc báo Thật 89.5% -> Bản Enhanced v2 báo AI 92.5% (Chính xác).\n"
-            "• Ca đối chứng (Mèo thật & Hoa thật): Bản Enhanced v2 xác nhận Ảnh Thật 78.2% và 72.2%.",
-            "Hình ảnh trực quan 4 tiêu bản kiểm tra kèm nhãn xác suất Before / After cạnh nhau.",
-            "Trên chính những bức ảnh meme làm khó bản gốc, Enhanced v2 nhận diện chính xác 100% với xác suất AI từ 70% đến 100%, đồng thời bảo vệ an toàn cho ảnh chụp quang học thật."
+            "Slide 10: 'Bắt Dính' 100% Những Ca Khó Mà Bản Gốc Đã Chào Thua",
+            "• Ca 1 — Meme mèo đen: Bản gốc đoán nhầm 'Ảnh thật 88.2%' -> Bản của nhóm bắt dính: 'Ảnh AI 70.1%'.\n"
+            "• Ca 2 — Meme ngựa cầm iPhone selfie 1: Bản gốc đoán nhầm 'Ảnh thật 71.4%' -> Bản của nhóm bắt dính: 'Ảnh AI 100.0% tuyệt đối'.\n"
+            "• Ca 3 — Meme ngựa cầm iPhone selfie 2: Bản gốc đoán nhầm 'Ảnh thật 89.5%' -> Bản của nhóm bắt dính: 'Ảnh AI 92.5%'.\n"
+            "• Ca đối chứng — Mèo thật & Hoa thật: Hệ thống vẫn nhận biết chính xác là Ảnh Thật (78%), không hề bị bắt bừa, bắt nhầm.",
+            "Bảng so sánh Before / After với hình ảnh meme hài hước và nhãn kết quả to rõ ràng đối chiếu 2 phiên bản.",
+            "Để chứng minh rõ nhất, mời thầy cô nhìn vào 3 ca 'bệnh nặng' này. Đây là 3 bức ảnh meme chế mà bản gốc CVPR 2025 bị lừa ngoạn mục: ảnh mèo và ngựa AI mà nó cứ khăng khăng bảo là thật đến 89%. Nhưng khi đưa vào hệ thống của bọn em, cả 3 bức ảnh đều bị vạch trần với xác suất AI từ 70% đến 100%! Và điều đáng mừng là khi đưa ảnh con mèo thật và bông hoa thật vào, hệ thống vẫn nhận chuẩn là ảnh thật, không hề bị hội chứng 'nhìn đâu cũng thấy ma'!"
         ),
         (
-            "Slide 11: Demo Hệ Thống Web Forensic Studio (Live Demo)",
-            "• Giới thiệu giao diện Streamlit Dark-Obsidian Studio (Localhost:8501).\n"
-            "• Trình diễn 4 kính quan sát đa tầng đồng bộ (Ảnh gốc, Heatmap dị thường, Sai phân SRM, Phổ 2D-FFT).\n"
-            "• Thanh tỷ trọng CAGU thích ứng thời gian thực.\n"
-            "• Nhật ký phán định Forensic Decision Log minh bạch từng chỉ số.\n"
-            "• Bộ công cụ dòng lệnh CLI phục vụ tích hợp nghiệp vụ tự động hóa.",
-            "Ảnh chụp toàn cảnh giao diện Web Studio đang phân tích ảnh; Video/ảnh động thao tác upload và kết quả tức thì.",
-            "Sau đây nhóm xin phép được mở trực tiếp giao diện Web Forensic Studio trên cổng 8501 để demo trực tiếp tải ảnh và bóc tách vết tích trong thời gian thực."
+            "Slide 11: Demo Thực Tế Giao Diện Web Studio — Bấm Là Thấy Kết Quả",
+            "• Xây dựng thành ứng dụng Web hoàn chỉnh: Giao diện tối Dark Mode hiện đại, mượt mà trên nền Streamlit.\n"
+            "• Bộ 4 màn hình soi ảnh đồng bộ: Xem ảnh gốc, Bản đồ nhiệt AI, Nhiễu lọc bề mặt SRM và Phổ sóng 2D-FFT cùng lúc.\n"
+            "• Nhật ký phân tích cực kỳ minh bạch: Giải thích rõ ràng tại sao kết luận AI, nhánh nào đóng góp bao nhiêu phần trăm.\n"
+            "• Có sẵn công cụ dòng lệnh (CLI): Cho phép các lập trình viên khác cắm vào hệ thống tự động quét hàng triệu ảnh.",
+            "Ảnh chụp toàn cảnh giao diện Web Studio đang chạy trên localhost:8501 với các thông số nhảy sinh động; Clip ngắn 5 giây tải ảnh lên.",
+            "Không chỉ dừng lại ở thuật toán trên máy tính cá nhân, nhóm em đã đóng gói toàn bộ nghiên cứu thành một ứng dụng Web Studio hoàn chỉnh chạy cực kỳ mượt mà. Người dùng chỉ cần kéo thả ảnh vào, màn hình sẽ chia làm 4 góc soi chiếu đa chiều: từ bản đồ nhiệt, nhiễu hạt bề mặt đến phổ tần số. Bên dưới có một bảng nhật ký giải thích rành rọt từng chỉ số, người dùng không cần biết lập trình nhìn vào cũng hiểu vì sao bức ảnh này là giả. Bọn em cũng có sẵn công cụ dòng lệnh để doanh nghiệp có thể quét tự động hàng loạt."
         ),
         (
-            "Slide 12: Kết Luận, Đóng Góp & Hướng Phát Triển",
-            "• Đóng góp chính: Xây dựng thành công hệ thống giám định ảnh AI đa miền Native CAGU đầu tiên giải quyết trọn vẹn điểm yếu nén lossy của bài báo gốc CVPR 2025.\n"
-            "• Tính ứng dụng: Đã đóng gói thành sản phẩm Web Studio hoàn chỉnh và CLI sẵn sàng triển khai thực tế.\n"
-            "• Hướng phát triển: Mở rộng kiểm thử cho video deepfake và tích hợp thêm mô hình tạo sinh âm thanh (Audio Deepfake).\n"
-            "• Lời cảm ơn thầy cô và hội đồng.",
-            "Thông tin liên hệ, QR Code dẫn đến GitHub repository của nhóm.",
-            "Tóm lại, đề tài đã giải quyết trọn vẹn bài toán đặt ra, nâng độ nhạy lên 100% và cung cấp công cụ trực quan minh bạch. Nhóm xin trân trọng cảm ơn quý thầy cô và sẵn sàng lắng nghe câu hỏi từ Hội đồng."
+            "Slide 12: Tổng Kết, Giá Trị Mang Lại & Hướng Mở Rộng",
+            "• Đã làm được: Vá hoàn toàn lỗ hổng nén ảnh của bài báo quốc tế CVPR 2025, đưa độ nhạy bắt ảnh AI lên mức 100%.\n"
+            "• Tính thực chiến cao: Có Web trực quan, có dòng lệnh tự động, sẵn sàng bảo vệ không gian mạng trước làn sóng tin giả.\n"
+            "• Hướng đi tiếp theo: Mở rộng bóc tách Video Deepfake từng khung hình và phát hiện giọng nói giả mạo bằng AI (Audio Deepfake).\n"
+            "• Lời cảm ơn: Nhóm 17 xin chân thành cảm ơn thầy cô đã lắng nghe và rất mong nhận được những góp ý quý báu!",
+            "Lời cảm ơn trang trọng; Mã QR tải mã nguồn GitHub của đề tài; Hình ảnh thành viên nhóm.",
+            "Tóm lại, đề tài của nhóm 17 không chỉ dừng ở mức đọc hiểu một bài báo quốc tế, mà bọn em đã thực sự đào sâu, tìm ra điểm yếu và nâng cấp nó thành một giải pháp thực chiến vượt trội, nâng tỷ lệ bắt ảnh AI lên 100%. Đây sẽ là một lá chắn hữu hiệu để chống lại nạn tin giả trên không gian mạng hiện nay. Trong tương lai, nhóm dự định sẽ phát triển tiếp sang mảng video và giọng nói AI. Nhóm em xin chân thành cảm ơn thầy cô và các bạn đã chú ý lắng nghe, rất mong nhận được những câu hỏi và đóng góp từ hội đồng ạ!"
         )
     ]
 
